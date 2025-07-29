@@ -1,81 +1,63 @@
 const pool = require('../../../db');
 const queries = require('./queries');
 
-const getCustomers = async (requestAnimationFrame,res) => {
+// Get all customers
+const getCustomers = (req, res) => {
     pool.query(queries.getCustomers, (error, results) => {
-        if (error) {
-            throw error;
-        }
+        if (error) return res.status(500).json({ error: error.message });
         res.status(200).json(results.rows);
     });
 };
 
-const getCustomerById = async (req, res) => {
+// Get customer by ID
+const getCustomerById = (req, res) => {
     const id = parseInt(req.params.id);
     pool.query(queries.getCustomerById, [id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(200).json(results.rows);
+        if (error) return res.status(500).json({ error: error.message });
+        if (results.rows.length === 0) return res.status(404).send('Customer not found');
+        res.status(200).json(results.rows[0]);
     });
 };
 
-const addCustomer = async (req, res) => {
-    const {id, first_name, last_name, email, password, address} = req.body;
-    //check if customer already exists
-    pool.query(queries.checkCustomerExists, [first_name, last_name, email], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        if (results.rows.length > 0) {
-            res.status(400).send('Customer already exists');
-        }
-    });
-    //add customer
-    pool.query(queries.addCustomer, [id, first_name, last_name, email, password, address], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(201).send(`Customer added with ID + name: ${id}: ${first_name} ${last_name}`);
+// Add customer
+const addCustomer = (req, res) => {
+    const { user_id, name, address } = req.body;
+    pool.query(queries.checkCustomerExists, [name, address, user_id], (error, results) => {
+        if (error) return res.status(500).json({ error: error.message });
+        if (results.rows.length > 0) return res.status(400).send('Customer already exists');
+        pool.query(queries.addCustomer, [user_id, name, address], (error, results) => {
+            if (error) return res.status(500).json({ error: error.message });
+            res.status(201).send(`Customer added for user_id: ${user_id}, name: ${name}`);
+        });
     });
 };
 
-const deleteCustomer = async (req, res) => {
+// Delete customer
+const deleteCustomer = (req, res) => {
     const id = parseInt(req.params.id);
     pool.query(queries.getCustomerById, [id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        if (results.rows.length === 0) {
-            res.status(400).send('Customer not found');
-        }
-    });
-    pool.query(queries.deleteCustomer, [id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(200).send(`Customer deleted with ID: ${id}`);
+        if (error) return res.status(500).json({ error: error.message });
+        if (results.rows.length === 0) return res.status(404).send('Customer not found');
+        pool.query(queries.deleteCustomer, [id], (error, results) => {
+            if (error) return res.status(500).json({ error: error.message });
+            res.status(200).send(`Customer deleted with ID: ${id}`);
+        });
     });
 };
 
-const editCustomer = async (req, res) => {
+// Edit customer
+const editCustomer = (req, res) => {
     const id = parseInt(req.params.id);
-    const {first_name, last_name, email, password, address} = req.body;
+    const { name, address } = req.body;
     pool.query(queries.getCustomerById, [id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        if (results.rows.length === 0) {
-            res.status(400).send('Customer not found');
-        }
+        if (error) return res.status(500).json({ error: error.message });
+        if (results.rows.length === 0) return res.status(404).send('Customer not found');
+        pool.query(queries.editCustomer, [name, address, id], (error, results) => {
+            if (error) return res.status(500).json({ error: error.message });
+            res.status(200).send(`Customer modified with ID: ${id}`);
+        });
     });
-    pool.query(queries.editCustomer, [first_name, last_name, email, id, address, password], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(200).send(`Customer modified with ID: ${id}`);
-    });
-};  
+};
 
 module.exports = {
     getCustomers,
