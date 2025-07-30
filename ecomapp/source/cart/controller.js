@@ -1,47 +1,45 @@
 const pool = require('../../../db');
 const queries = require('./queries');
 
-const getCartByCustomerId = async (requestAnimationFrame,res) => {
-    pool.query(queries.getCartByCustomerId, (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(200).json(results.rows);
+// Get cart for a user
+const getCart = (req, res) => {
+    const user_id = req.params.user_id;
+    pool.query(queries.getCartByUserId, [user_id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(result.rows);
     });
 };
 
-const addProduct = async (req, res) => {
-    const {id, product_name, customer_id} = req.body;
-    //add customer
-    pool.query(queries.addProduct, [id, product_name, customer_id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(201).send(`Product added added with ID + name: ${id}: ${product_name}`);
+// Add product to cart
+const addProduct = (req, res) => {
+    const { user_id, product_id, quantity } = req.body;
+    pool.query(queries.addProductToCart, [user_id, product_id, quantity], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ message: 'Product added to cart!' });
     });
 };
 
-const removeProduct = async (req, res) => {
-    const id = parseInt(req.params.id);
-    pool.query(queries.getProductById, [id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        if (results.rows.length === 0) {
-            res.status(400).send('Product not found');
-        }
-    });
-    pool.query(queries.removeProduct, [id], (error, results) => {
-        if (error) {
-            throw error;
-        }
-        res.status(200).send(`Product ${product_name} deleted with ID: ${id}`);
+// Update cart item quantity
+const updateCartItem = (req, res) => {
+    const { user_id, product_id, quantity } = req.body;
+    pool.query(queries.updateCartItem, [quantity, user_id, product_id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Cart updated!' });
     });
 };
 
+// Remove product from cart
+const removeProduct = (req, res) => {
+    const { user_id, product_id } = req.body;
+    pool.query(queries.removeProductFromCart, [user_id, product_id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Product removed from cart!' });
+    });
+};
 
 module.exports = {
-    getCartByCustomerId,
+    getCart,
     addProduct,
-    removeProduct,   
+    updateCartItem,
+    removeProduct,
 };
